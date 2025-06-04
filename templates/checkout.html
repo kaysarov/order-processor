@@ -3,22 +3,30 @@
 {% block content %}
 <h1 class="mb-3">Оформление заказа</h1>
 {% if items %}
-<table class="table table-bordered mb-3">
-<tr><th>Товар</th><th>Количество</th><th>Цена</th><th>Сумма</th></tr>
+<div class="row row-cols-1 g-2 mb-3">
 {% for it in items %}
-<tr>
-<td>{{ it.product.name }}</td>
-<td>{{ it.qty }}</td>
-<td>{{ '%.2f'|format(it.product.price) }}</td>
-<td>{{ '%.2f'|format(it.product.price * it.qty) }}</td>
-</tr>
+  <div class="col">
+    <div class="card p-2">
+      <div class="d-flex justify-content-between">
+        <div>
+          <h6 class="mb-1">{{ it.product.name }}</h6>
+          <small>Количество: {{ it.qty }}</small>
+        </div>
+        <div>{{ '%.2f'|format(it.product.price * it.qty) }}</div>
+      </div>
+    </div>
+  </div>
 {% endfor %}
-</table>
+</div>
 <p><strong>Итого: {{ '%.2f'|format(total) }}</strong></p>
-<form method="post" class="w-25">
+<form method="post" enctype="multipart/form-data" class="w-100 w-md-50">
   <div class="mb-3">
-    <label class="form-label">Дата доставки</label>
-    <input type="date" name="delivery_date" class="form-control" required>
+    <label class="form-label">Желаемые дата и время доставки</label>
+    <input type="datetime-local" name="desired_datetime" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Чек об оплате (опционально)</label>
+    <input type="file" name="receipt" class="form-control">
   </div>
   <button type="submit" class="btn btn-primary">Подтвердить</button>
 </form>
