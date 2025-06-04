@@ -1,14 +1,19 @@
-from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, send_from_directory, session
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import (LoginManager, UserMixin, login_user, logout_user,
+                         login_required, current_user)
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime
 import os
+import re
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///orders.db'
 app.config['SECRET_KEY'] = 'change-me'
 db = SQLAlchemy(app)
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
 
 STATUS_TITLES = {
     'created': 'Создан',
@@ -18,14 +23,15 @@ STATUS_TITLES = {
     'shipped': 'Доставлен'
 }
 
-class User(db.Model):
+class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
     address = db.Column(db.String(200))
     organization = db.Column(db.String(200))
-    phone = db.Column(db.String(50))
+    phone = db.Column(db.String(50), unique=True)
+    is_blocked = db.Column(db.Boolean, default=False)
     delivery_time = db.Column(db.String(50))
 
 class Product(db.Model):
@@ -61,27 +67,15 @@ class OrderItem(db.Model):
 def create_tables():
     db.create_all()
 
-# Authentication helpers
 
-def current_user():
-    uid = session.get('user_id')
-    if uid:
-        return User.query.get(uid)
-    return None
-
-def login_required(f):
-    from functools import wraps
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        if not current_user():
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return wrapper
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 
 @app.context_processor
 def inject_user():
-    return dict(current_user=current_user(), status_titles=STATUS_TITLES)
+    return dict(current_user=current_user, status_titles=STATUS_TITLES)
 
 # Routes for registration and login
 @app.route('/register', methods=['GET', 'POST'])
@@ -95,6 +89,10 @@ def register():
         delivery_time = request.form['delivery_time']
         if User.query.filter_by(username=username).first():
             return 'User exists'
+        if not re.fullmatch(r'^(\+7|8)\d{10}$', phone):
+            return 'Phone must be Russian format +7XXXXXXXXXX'
+        if User.query.filter_by(phone=phone).first():
+            return 'Phone already registered'
         user = User(
             username=username,
             password_hash=generate_password_hash(password),
@@ -115,14 +113,16 @@ def login():
         password = request.form['password']
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password_hash, password):
-            session['user_id'] = user.id
+            if user.is_blocked:
+                return 'Account is blocked'
+            login_user(user)
             return redirect(url_for('index'))
         return 'Invalid credentials'
     return render_template('login.html')
 
 @app.route('/logout')
 def logout():
-    session.pop('user_id', None)
+    logout_user()
     return redirect(url_for('login'))
 
 # Shop and cart handling
@@ -194,7 +194,7 @@ def checkout():
             filename = secure_filename(receipt.filename)
             receipt.save(os.path.join('uploads', filename))
         comment = request.form.get('comment')
-        order = Order(user_id=current_user().id,
+        order = Order(user_id=current_user.id,
                       desired_delivery=desired_dt,
                       receipt_filename=filename,
                       comment=comment)
@@ -214,7 +214,7 @@ def checkout():
 @app.route('/orders')
 @login_required
 def my_orders():
-    query = Order.query.filter_by(user_id=current_user().id)
+    query = Order.query.filter_by(user_id=current_user.id)
     date_from = request.args.get('date_from')
     date_to = request.args.get('date_to')
     if date_from:
@@ -232,7 +232,7 @@ def my_orders():
 @login_required
 def upload_receipt(order_id):
     order = Order.query.get_or_404(order_id)
-    if order.user_id != current_user().id:
+    if order.user_id != current_user.id:
         return 'Not authorized', 403
     receipt = request.files.get('receipt')
     if receipt and receipt.filename:
@@ -252,14 +252,14 @@ def uploaded_file(filename):
 @app.route('/admin')
 @login_required
 def admin_index():
-    if not current_user().is_admin:
+    if not current_user.is_admin:
         return 'Not authorized'
     return redirect(url_for('admin_products'))
 
 @app.route('/admin/products', methods=['GET', 'POST'])
 @login_required
 def admin_products():
-    if not current_user().is_admin:
+    if not current_user.is_admin:
         return 'Not authorized'
     if request.method == 'POST':
         name = request.form['name']
@@ -293,7 +293,7 @@ def admin_products():
 @app.route('/admin/products/<int:pid>', methods=['GET', 'POST'])
 @login_required
 def admin_product_edit(pid):
-    if not current_user().is_admin:
+    if not current_user.is_admin:
         return 'Not authorized'
     product = Product.query.get_or_404(pid)
     if request.method == 'POST':
@@ -316,7 +316,7 @@ def admin_product_edit(pid):
 @app.route('/admin/orders', methods=['GET', 'POST'])
 @login_required
 def admin_orders():
-    if not current_user().is_admin:
+    if not current_user.is_admin:
         return 'Not authorized'
     if request.method == 'POST':
         order_id = int(request.form['order_id'])
@@ -346,6 +346,22 @@ def admin_orders():
     statuses = list(STATUS_TITLES.keys())
     return render_template('admin_orders.html', orders=orders, statuses=statuses,
                            total_qty=total_qty, total_price=total_price)
+
+
+@app.route('/admin/users', methods=['GET', 'POST'])
+@login_required
+def admin_users():
+    if not current_user.is_admin:
+        return 'Not authorized'
+    if request.method == 'POST':
+        uid = int(request.form['user_id'])
+        block = request.form.get('block') == '1'
+        user = User.query.get(uid)
+        if user:
+            user.is_blocked = block
+            db.session.commit()
+    users = User.query.order_by(User.username).all()
+    return render_template('admin_users.html', users=users)
 
 if __name__ == '__main__':
     with app.app_context():

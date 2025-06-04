@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Пользователи{% endblock %}
+{% block content %}
+<h1 class="mb-3">Пользователи</h1>
+<table class="table table-bordered">
+<tr><th>Имя</th><th>Телефон</th><th>Заблокирован</th><th>Действие</th></tr>
+{% for u in users %}
+<tr>
+<td>{{ u.username }}</td>
+<td>{{ u.phone }}</td>
+<td>{{ 'Да' if u.is_blocked else 'Нет' }}</td>
+<td>
+  <form method="post" class="d-inline">
+    <input type="hidden" name="user_id" value="{{ u.id }}">
+    <input type="hidden" name="block" value="{{ '0' if u.is_blocked else '1' }}">
+    <button type="submit" class="btn btn-sm {{ 'btn-success' if u.is_blocked else 'btn-danger' }}">
+      {{ 'Разблокировать' if u.is_blocked else 'Заблокировать' }}
+    </button>
+  </form>
+</td>
+</tr>
+{% endfor %}
+</table>
+<a href="{{ url_for('admin_products') }}">Товары</a>
+{% endblock %}
+
