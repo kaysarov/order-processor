@@ -6,7 +6,11 @@
 {% for p in products %}
   <div class="col">
     <div class="card h-100">
-      {% if p.image_url %}<img src="{{ p.image_url }}" class="card-img-top" alt="{{ p.name }}">{% endif %}
+      {% if p.image_filename %}
+        <img src="{{ url_for('uploaded_file', filename='products/' ~ p.image_filename) }}" class="card-img-top" alt="{{ p.name }}">
+      {% elif p.image_url %}
+        <img src="{{ p.image_url }}" class="card-img-top" alt="{{ p.name }}">
+      {% endif %}
       <div class="card-body">
         <h5 class="card-title">{{ p.name }}</h5>
         <p class="card-text">{{ p.description }}</p>

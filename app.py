@@ -10,6 +10,14 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///orders.db'
 app.config['SECRET_KEY'] = 'change-me'
 db = SQLAlchemy(app)
 
+STATUS_TITLES = {
+    'created': 'Создан',
+    'in_work': 'В работе',
+    'gathered': 'Собран',
+    'sent': 'Отправлен',
+    'shipped': 'Доставлен'
+}
+
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -25,6 +33,7 @@ class Product(db.Model):
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
     image_url = db.Column(db.String(200))
+    image_filename = db.Column(db.String(200))  # uploaded image path
     quantity = db.Column(db.Integer, default=0)
     price = db.Column(db.Float, default=0.0)
     is_published = db.Column(db.Boolean, default=False)
@@ -38,6 +47,7 @@ class Order(db.Model):
     desired_delivery = db.Column(db.DateTime)
     delivery_interval = db.Column(db.String(100))
     receipt_filename = db.Column(db.String(200))
+    comment = db.Column(db.Text)
     user = db.relationship('User')
 
 class OrderItem(db.Model):
@@ -71,7 +81,7 @@ def login_required(f):
 
 @app.context_processor
 def inject_user():
-    return dict(current_user=current_user())
+    return dict(current_user=current_user(), status_titles=STATUS_TITLES)
 
 # Routes for registration and login
 @app.route('/register', methods=['GET', 'POST'])
@@ -183,9 +193,11 @@ def checkout():
             os.makedirs('uploads', exist_ok=True)
             filename = secure_filename(receipt.filename)
             receipt.save(os.path.join('uploads', filename))
+        comment = request.form.get('comment')
         order = Order(user_id=current_user().id,
                       desired_delivery=desired_dt,
-                      receipt_filename=filename)
+                      receipt_filename=filename,
+                      comment=comment)
         db.session.add(order)
         db.session.flush()
         for item in items:
@@ -202,7 +214,16 @@ def checkout():
 @app.route('/orders')
 @login_required
 def my_orders():
-    orders = Order.query.filter_by(user_id=current_user().id).all()
+    query = Order.query.filter_by(user_id=current_user().id)
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
+    if date_from:
+        df = datetime.strptime(date_from, '%Y-%m-%d')
+        query = query.filter(Order.created_at >= df)
+    if date_to:
+        dt = datetime.strptime(date_to, '%Y-%m-%d')
+        query = query.filter(Order.created_at <= dt)
+    orders = query.order_by(Order.created_at.desc()).all()
     totals = {o.id: sum(it.quantity * it.product.price for it in o.items) for o in orders}
     return render_template('orders.html', orders=orders, order_totals=totals)
 
@@ -245,7 +266,12 @@ def admin_products():
         quantity = int(request.form.get('quantity', 0))
         price = float(request.form.get('price', 0))
         description = request.form.get('description')
-        image_url = request.form.get('image_url')
+        image = request.files.get('image')
+        image_filename = None
+        if image and image.filename:
+            os.makedirs('uploads/products', exist_ok=True)
+            image_filename = secure_filename(image.filename)
+            image.save(os.path.join('uploads/products', image_filename))
         is_published = True if request.form.get('is_published') == 'on' else False
         is_limited = True if request.form.get('is_limited') == 'on' else False
         product = Product.query.filter_by(name=name).first()
@@ -255,7 +281,8 @@ def admin_products():
         product.quantity = quantity
         product.price = price
         product.description = description
-        product.image_url = image_url
+        if image_filename:
+            product.image_filename = image_filename
         product.is_published = is_published
         product.is_limited = is_limited
         db.session.commit()
@@ -274,7 +301,12 @@ def admin_product_edit(pid):
         product.quantity = int(request.form.get('quantity', 0))
         product.price = float(request.form.get('price', 0))
         product.description = request.form.get('description')
-        product.image_url = request.form.get('image_url')
+        image = request.files.get('image')
+        if image and image.filename:
+            os.makedirs('uploads/products', exist_ok=True)
+            filename = secure_filename(image.filename)
+            image.save(os.path.join('uploads/products', filename))
+            product.image_filename = filename
         product.is_published = True if request.form.get('is_published') == 'on' else False
         product.is_limited = True if request.form.get('is_limited') == 'on' else False
         db.session.commit()
@@ -311,7 +343,7 @@ def admin_orders():
     orders = query.order_by(Order.created_at.desc()).all()
     total_qty = sum(item.quantity for o in orders for item in o.items)
     total_price = sum(item.quantity * item.product.price for o in orders for item in o.items)
-    statuses = ['created', 'in_work', 'gathered', 'sent', 'shipped']
+    statuses = list(STATUS_TITLES.keys())
     return render_template('admin_orders.html', orders=orders, statuses=statuses,
                            total_qty=total_qty, total_price=total_price)
 
