@@ -3,7 +3,7 @@
 {% block content %}
 <h1 class="mb-3">Мои заказы</h1>
 <table class="table table-bordered">
-<tr><th>ID</th><th>Статус</th><th>Создан</th><th>Дата доставки</th><th>Товары</th></tr>
+<tr><th>ID</th><th>Статус</th><th>Создан</th><th>Дата доставки</th><th>Товары</th><th>Сумма</th></tr>
 {% for o in orders %}
 <tr>
 <td>{{ o.id }}</td>
@@ -17,6 +17,7 @@
   {% endfor %}
   </ul>
 </td>
+<td>{{ '%.2f'|format(order_totals[o.id]) }}</td>
 </tr>
 {% endfor %}
 </table>

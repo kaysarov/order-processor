@@ -10,6 +10,7 @@
       <div class="card-body">
         <h5 class="card-title">{{ p.name }}</h5>
         <p class="card-text">{{ p.description }}</p>
+        <p class="card-text">Цена: {{ '%.2f'|format(p.price) }}</p>
         {% if p.is_limited %}
           <p class="text-muted">В наличии: {{ p.quantity }}</p>
         {% endif %}

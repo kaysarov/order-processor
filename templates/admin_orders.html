@@ -15,9 +15,9 @@
   <div class="col-md-3"><input type="date" name="date_to" class="form-control" value="{{ request.args.get('date_to','') }}" placeholder="по дату"></div>
   <div class="col-md-2"><button class="btn btn-secondary" type="submit">Фильтр</button></div>
 </form>
-<p>Всего товаров в выборке: {{ total_qty }}</p>
+<p>Всего товаров в выборке: {{ total_qty }} | Сумма: {{ '%.2f'|format(total_price) }}</p>
 <table class="table table-bordered">
-<tr><th>ID</th><th>Пользователь</th><th>Статус</th><th>Создан</th><th>Дата доставки</th><th>Товары</th><th>Обновить</th></tr>
+<tr><th>ID</th><th>Пользователь</th><th>Статус</th><th>Создан</th><th>Дата доставки</th><th>Товары</th><th>Сумма</th><th>Обновить</th></tr>
 {% for o in orders %}
 <tr>
 <td>{{ o.id }}</td>
@@ -32,6 +32,7 @@
   {% endfor %}
   </ul>
 </td>
+<td>{{ '%.2f'|format(sum(it.product.price * it.quantity for it in o.items)) }}</td>
 <td>
   <form method="post" class="d-flex">
     <input type="hidden" name="order_id" value="{{ o.id }}">
