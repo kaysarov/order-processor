@@ -1,13 +1,27 @@
-<!doctype html>
-<title>Register</title>
-<h1>Register</h1>
-<form method="post">
-  <input type="text" name="username" placeholder="Username" required><br>
-  <input type="password" name="password" placeholder="Password" required><br>
-  <input type="text" name="address" placeholder="Address" required><br>
-  <input type="text" name="organization" placeholder="Organization" required><br>
-  <input type="text" name="phone" placeholder="Phone" required><br>
-  <input type="text" name="delivery_time" placeholder="Desired delivery time" required><br>
-  <button type="submit">Register</button>
+{% extends 'base.html' %}
+{% block title %}Регистрация{% endblock %}
+{% block content %}
+<h1 class="mb-3">Регистрация</h1>
+<form method="post" class="w-50">
+  <div class="mb-3">
+    <input type="text" name="username" class="form-control" placeholder="Имя пользователя" required>
+  </div>
+  <div class="mb-3">
+    <input type="password" name="password" class="form-control" placeholder="Пароль" required>
+  </div>
+  <div class="mb-3">
+    <input type="text" name="address" class="form-control" placeholder="Адрес" required>
+  </div>
+  <div class="mb-3">
+    <input type="text" name="organization" class="form-control" placeholder="Организация" required>
+  </div>
+  <div class="mb-3">
+    <input type="text" name="phone" class="form-control" placeholder="Телефон" required>
+  </div>
+  <div class="mb-3">
+    <input type="text" name="delivery_time" class="form-control" placeholder="Желаемое время доставки" required>
+  </div>
+  <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
 </form>
-<a href="{{ url_for('login') }}">Login</a>
+<p class="mt-2"><a href="{{ url_for('login') }}">Вход</a></p>
+{% endblock %}

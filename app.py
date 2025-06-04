@@ -21,13 +21,18 @@ class User(db.Model):
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
+    description = db.Column(db.Text)
+    image_url = db.Column(db.String(200))
     quantity = db.Column(db.Integer, default=0)
+    is_published = db.Column(db.Boolean, default=False)
+    is_limited = db.Column(db.Boolean, default=True)
 
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     status = db.Column(db.String(20), default='created')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    delivery_date = db.Column(db.Date)
     user = db.relationship('User')
 
 class OrderItem(db.Model):
@@ -57,6 +62,11 @@ def login_required(f):
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return wrapper
+
+
+@app.context_processor
+def inject_user():
+    return dict(current_user=current_user())
 
 # Routes for registration and login
 @app.route('/register', methods=['GET', 'POST'])
@@ -100,26 +110,79 @@ def logout():
     session.pop('user_id', None)
     return redirect(url_for('login'))
 
-# Index page shows order form if user is logged in
-@app.route('/', methods=['GET', 'POST'])
+# Shop and cart handling
+def get_cart():
+    return session.setdefault('cart', {})
+
+
+@app.route('/')
 @login_required
 def index():
-    products = Product.query.all()
+    products = Product.query.filter_by(is_published=True).all()
+    return render_template('shop.html', products=products)
+
+
+@app.route('/add_to_cart/<int:pid>')
+@login_required
+def add_to_cart(pid):
+    product = Product.query.get(pid)
+    if not product or not product.is_published:
+        return redirect(url_for('index'))
+    cart = get_cart()
+    qty = cart.get(str(pid), 0)
+    if not product.is_limited or qty < product.quantity:
+        cart[str(pid)] = qty + 1
+        session['cart'] = cart
+    return redirect(url_for('index'))
+
+
+@app.route('/remove_from_cart/<int:pid>')
+@login_required
+def remove_from_cart(pid):
+    cart = get_cart()
+    if str(pid) in cart:
+        cart.pop(str(pid))
+        session['cart'] = cart
+    return redirect(url_for('cart_view'))
+
+
+@app.route('/cart')
+@login_required
+def cart_view():
+    cart_data = []
+    cart = get_cart()
+    for pid, qty in cart.items():
+        product = Product.query.get(int(pid))
+        if product:
+            cart_data.append({'product': product, 'qty': qty})
+    return render_template('cart.html', items=cart_data)
+
+
+@app.route('/checkout', methods=['GET', 'POST'])
+@login_required
+def checkout():
+    cart = get_cart()
+    items = []
+    for pid, qty in cart.items():
+        product = Product.query.get(int(pid))
+        if product:
+            items.append({'product': product, 'qty': qty})
     if request.method == 'POST':
-        order = Order(user_id=current_user().id)
+        date_str = request.form['delivery_date']
+        delivery_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        order = Order(user_id=current_user().id, delivery_date=delivery_date)
         db.session.add(order)
-        db.session.flush()  # to generate order.id
-        for pid, qty in request.form.items():
-            if not pid.startswith('product_'):
-                continue
-            pid_int = int(pid.split('_')[1])
-            qty_int = int(qty)
-            if qty_int > 0:
-                item = OrderItem(order_id=order.id, product_id=pid_int, quantity=qty_int)
-                db.session.add(item)
+        db.session.flush()
+        for item in items:
+            db.session.add(OrderItem(order_id=order.id,
+                                     product_id=item['product'].id,
+                                     quantity=item['qty']))
+            if item['product'].is_limited:
+                item['product'].quantity -= item['qty']
         db.session.commit()
+        session['cart'] = {}
         return redirect(url_for('my_orders'))
-    return render_template('order_form.html', products=products)
+    return render_template('checkout.html', items=items)
 
 @app.route('/orders')
 @login_required
@@ -142,13 +205,20 @@ def admin_products():
         return 'Not authorized'
     if request.method == 'POST':
         name = request.form['name']
-        quantity = int(request.form['quantity'])
+        quantity = int(request.form.get('quantity', 0))
+        description = request.form.get('description')
+        image_url = request.form.get('image_url')
+        is_published = True if request.form.get('is_published') == 'on' else False
+        is_limited = True if request.form.get('is_limited') == 'on' else False
         product = Product.query.filter_by(name=name).first()
         if not product:
-            product = Product(name=name, quantity=quantity)
+            product = Product(name=name)
             db.session.add(product)
-        else:
-            product.quantity = quantity
+        product.quantity = quantity
+        product.description = description
+        product.image_url = image_url
+        product.is_published = is_published
+        product.is_limited = is_limited
         db.session.commit()
     products = Product.query.all()
     return render_template('admin_products.html', products=products)
@@ -165,9 +235,23 @@ def admin_orders():
         if order:
             order.status = status
             db.session.commit()
-    orders = Order.query.order_by(Order.created_at.desc()).all()
+    query = Order.query
+    status_filter = request.args.get('status')
+    if status_filter:
+        query = query.filter_by(status=status_filter)
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
+    if date_from:
+        df = datetime.strptime(date_from, '%Y-%m-%d')
+        query = query.filter(Order.created_at >= df)
+    if date_to:
+        dt = datetime.strptime(date_to, '%Y-%m-%d')
+        query = query.filter(Order.created_at <= dt)
+    orders = query.order_by(Order.created_at.desc()).all()
+    total_qty = sum(item.quantity for o in orders for item in o.items)
     statuses = ['created', 'in_work', 'gathered', 'sent', 'shipped']
-    return render_template('admin_orders.html', orders=orders, statuses=statuses)
+    return render_template('admin_orders.html', orders=orders, statuses=statuses,
+                           total_qty=total_qty)
 
 if __name__ == '__main__':
     with app.app_context():

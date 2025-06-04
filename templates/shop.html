@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}Витрина{% endblock %}
+{% block content %}
+<h1 class="mb-3">Витрина</h1>
+<div class="row row-cols-1 row-cols-md-3 g-4">
+{% for p in products %}
+  <div class="col">
+    <div class="card h-100">
+      {% if p.image_url %}<img src="{{ p.image_url }}" class="card-img-top" alt="{{ p.name }}">{% endif %}
+      <div class="card-body">
+        <h5 class="card-title">{{ p.name }}</h5>
+        <p class="card-text">{{ p.description }}</p>
+        {% if p.is_limited %}
+          <p class="text-muted">В наличии: {{ p.quantity }}</p>
+        {% endif %}
+        <a href="{{ url_for('add_to_cart', pid=p.id) }}" class="btn btn-primary">В корзину</a>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+</div>
+{% endblock %}

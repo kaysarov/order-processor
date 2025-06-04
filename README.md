@@ -1,11 +1,11 @@
 # Order Processor
 
-Simple Flask web application for managing product inventory and processing orders.
+Simple Flask web application for managing product inventory and processing orders. The UI uses Bootstrap and supports Russian localization.
 
 ## Features
 - Admin panel to manage product stock.
 - User registration and login.
-- Users can create orders selecting products and quantities.
+- Users can browse a storefront, add products to a cart and checkout specifying delivery date.
 - Admin can view and update order statuses (created, in_work, gathered, sent, shipped).
 
 ## Installation
