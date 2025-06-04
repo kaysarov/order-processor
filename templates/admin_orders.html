@@ -16,36 +16,47 @@
   <div class="col-md-2"><button class="btn btn-secondary" type="submit">Фильтр</button></div>
 </form>
 <p>Всего товаров в выборке: {{ total_qty }} | Сумма: {{ '%.2f'|format(total_price) }}</p>
-<table class="table table-bordered">
-<tr><th>ID</th><th>Пользователь</th><th>Статус</th><th>Создан</th><th>Дата доставки</th><th>Товары</th><th>Сумма</th><th>Обновить</th></tr>
+<div class="row row-cols-1 g-3">
 {% for o in orders %}
-<tr>
-<td>{{ o.id }}</td>
-<td>{{ o.user.username }}</td>
-<td>{{ o.status }}</td>
-<td>{{ o.created_at.strftime('%Y-%m-%d') }}</td>
-<td>{{ o.delivery_date }}</td>
-<td>
-  <ul>
-  {% for item in o.items %}
-    <li>{{ item.product.name }} - {{ item.quantity }}</li>
-  {% endfor %}
-  </ul>
-</td>
-<td>{{ '%.2f'|format(sum(it.product.price * it.quantity for it in o.items)) }}</td>
-<td>
-  <form method="post" class="d-flex">
-    <input type="hidden" name="order_id" value="{{ o.id }}">
-    <select name="status" class="form-select me-2">
-    {% for s in statuses %}
-      <option value="{{ s }}" {% if s == o.status %}selected{% endif %}>{{ s }}</option>
-    {% endfor %}
-    </select>
-    <button type="submit" class="btn btn-primary">Обновить</button>
-  </form>
-</td>
-</tr>
+  <div class="col">
+    <div class="card p-3">
+      <div class="d-flex justify-content-between">
+        <div>
+          <strong>#{{ o.id }}</strong> - {{ o.user.username }}
+        </div>
+        <span>{{ o.status }}</span>
+      </div>
+      <div class="mt-2">
+        <small>Создан: {{ o.created_at.strftime('%Y-%m-%d') }}</small><br>
+        <small>Желаемая доставка: {{ o.desired_delivery.strftime('%Y-%m-%d %H:%M') if o.desired_delivery else '' }}</small><br>
+        {% if o.delivery_interval %}<small>Будет доставлено: {{ o.delivery_interval }}</small><br>{% endif %}
+        {% if o.receipt_filename %}<small><a href="{{ url_for('uploaded_file', filename=o.receipt_filename) }}" target="_blank">Чек</a></small><br>{% endif %}
+      </div>
+      <ul class="my-2">
+      {% for item in o.items %}
+        <li>{{ item.product.name }} - {{ item.quantity }}</li>
+      {% endfor %}
+      </ul>
+      <p>Сумма: {{ '%.2f'|format(sum(it.product.price * it.quantity for it in o.items)) }}</p>
+      <form method="post" class="row g-2">
+        <input type="hidden" name="order_id" value="{{ o.id }}">
+        <div class="col-12 col-md-4">
+          <select name="status" class="form-select">
+          {% for s in statuses %}
+            <option value="{{ s }}" {% if s == o.status %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+          </select>
+        </div>
+        <div class="col-12 col-md-5">
+          <input type="text" name="delivery_interval" value="{{ o.delivery_interval }}" placeholder="дата и время" class="form-control">
+        </div>
+        <div class="col-12 col-md-3">
+          <button type="submit" class="btn btn-primary w-100">Обновить</button>
+        </div>
+      </form>
+    </div>
+  </div>
 {% endfor %}
-</table>
+</div>
 <a href="{{ url_for('admin_products') }}">Товары</a>
 {% endblock %}

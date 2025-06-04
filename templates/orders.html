@@ -2,23 +2,35 @@
 {% block title %}Мои заказы{% endblock %}
 {% block content %}
 <h1 class="mb-3">Мои заказы</h1>
-<table class="table table-bordered">
-<tr><th>ID</th><th>Статус</th><th>Создан</th><th>Дата доставки</th><th>Товары</th><th>Сумма</th></tr>
+<div class="row row-cols-1 g-3">
 {% for o in orders %}
-<tr>
-<td>{{ o.id }}</td>
-<td>{{ o.status }}</td>
-<td>{{ o.created_at.strftime('%Y-%m-%d') }}</td>
-<td>{{ o.delivery_date }}</td>
-<td>
-  <ul>
-  {% for item in o.items %}
-    <li>{{ item.product.name }} - {{ item.quantity }}</li>
-  {% endfor %}
-  </ul>
-</td>
-<td>{{ '%.2f'|format(order_totals[o.id]) }}</td>
-</tr>
+  <div class="col">
+    <div class="card p-3">
+      <div class="d-flex justify-content-between mb-2">
+        <strong>#{{ o.id }}</strong>
+        <span>{{ o.status }}</span>
+      </div>
+      <div class="mb-2">
+        <small>Создан: {{ o.created_at.strftime('%Y-%m-%d') }}</small><br>
+        <small>Желаемая доставка: {{ o.desired_delivery.strftime('%Y-%m-%d %H:%M') if o.desired_delivery else '' }}</small><br>
+        {% if o.delivery_interval %}<small>Будет доставлено: {{ o.delivery_interval }}</small><br>{% endif %}
+      </div>
+      <ul class="mb-2">
+        {% for item in o.items %}
+          <li>{{ item.product.name }} - {{ item.quantity }}</li>
+        {% endfor %}
+      </ul>
+      <p class="mb-2">Сумма: {{ '%.2f'|format(order_totals[o.id]) }}</p>
+      {% if o.receipt_filename %}
+        <a href="{{ url_for('uploaded_file', filename=o.receipt_filename) }}" target="_blank">Скачать чек</a>
+      {% else %}
+        <form method="post" action="{{ url_for('upload_receipt', order_id=o.id) }}" enctype="multipart/form-data" class="mt-2">
+          <input type="file" name="receipt" class="form-control mb-2" required>
+          <button class="btn btn-sm btn-secondary" type="submit">Загрузить чек</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
 {% endfor %}
-</table>
+</div>
 {% endblock %}

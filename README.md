@@ -5,8 +5,9 @@ Simple Flask web application for managing product inventory and processing order
 ## Features
 - Admin panel to manage product stock.
 - User registration and login.
-- Users can browse a storefront, add products to a cart and checkout specifying delivery date.
-- Admin can view and update order statuses (created, in_work, gathered, sent, shipped).
+- Users can browse a storefront, add products to a cart and checkout specifying desired delivery date and time.
+- Users may upload a payment receipt so admins can confirm the order.
+- Admin can set a delivery interval for each order and update order statuses (created, in_work, gathered, sent, shipped).
 
 ## Installation
 1. Install dependencies:

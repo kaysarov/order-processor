@@ -1,7 +1,9 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 from datetime import datetime
+import os
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///orders.db'
@@ -33,7 +35,9 @@ class Order(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     status = db.Column(db.String(20), default='created')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    delivery_date = db.Column(db.Date)
+    desired_delivery = db.Column(db.DateTime)
+    delivery_interval = db.Column(db.String(100))
+    receipt_filename = db.Column(db.String(200))
     user = db.relationship('User')
 
 class OrderItem(db.Model):
@@ -171,9 +175,17 @@ def checkout():
             items.append({'product': product, 'qty': qty})
     total = sum(i['product'].price * i['qty'] for i in items)
     if request.method == 'POST':
-        date_str = request.form['delivery_date']
-        delivery_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        order = Order(user_id=current_user().id, delivery_date=delivery_date)
+        dt_str = request.form['desired_datetime']
+        desired_dt = datetime.strptime(dt_str, '%Y-%m-%dT%H:%M')
+        receipt = request.files.get('receipt')
+        filename = None
+        if receipt and receipt.filename:
+            os.makedirs('uploads', exist_ok=True)
+            filename = secure_filename(receipt.filename)
+            receipt.save(os.path.join('uploads', filename))
+        order = Order(user_id=current_user().id,
+                      desired_delivery=desired_dt,
+                      receipt_filename=filename)
         db.session.add(order)
         db.session.flush()
         for item in items:
@@ -193,6 +205,27 @@ def my_orders():
     orders = Order.query.filter_by(user_id=current_user().id).all()
     totals = {o.id: sum(it.quantity * it.product.price for it in o.items) for o in orders}
     return render_template('orders.html', orders=orders, order_totals=totals)
+
+
+@app.route('/upload_receipt/<int:order_id>', methods=['POST'])
+@login_required
+def upload_receipt(order_id):
+    order = Order.query.get_or_404(order_id)
+    if order.user_id != current_user().id:
+        return 'Not authorized', 403
+    receipt = request.files.get('receipt')
+    if receipt and receipt.filename:
+        os.makedirs('uploads', exist_ok=True)
+        filename = secure_filename(receipt.filename)
+        receipt.save(os.path.join('uploads', filename))
+        order.receipt_filename = filename
+        db.session.commit()
+    return redirect(url_for('my_orders'))
+
+
+@app.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    return send_from_directory('uploads', filename)
 
 # Admin routes
 @app.route('/admin')
@@ -256,9 +289,12 @@ def admin_orders():
     if request.method == 'POST':
         order_id = int(request.form['order_id'])
         status = request.form['status']
+        interval = request.form.get('delivery_interval')
         order = Order.query.get(order_id)
         if order:
             order.status = status
+            if interval:
+                order.delivery_interval = interval
             db.session.commit()
     query = Order.query
     status_filter = request.args.get('status')
