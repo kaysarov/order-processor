@@ -7,7 +7,7 @@
     <select name="status" class="form-select">
       <option value="">Все статусы</option>
       {% for s in statuses %}
-        <option value="{{ s }}" {% if request.args.get('status')==s %}selected{% endif %}>{{ s }}</option>
+        <option value="{{ s }}" {% if request.args.get('status')==s %}selected{% endif %}>{{ status_titles[s] }}</option>
       {% endfor %}
     </select>
   </div>
@@ -24,7 +24,7 @@
         <div>
           <strong>#{{ o.id }}</strong> - {{ o.user.username }}
         </div>
-        <span>{{ o.status }}</span>
+        <span>{{ status_titles[o.status] }}</span>
       </div>
       <div class="mt-2">
         <small>Создан: {{ o.created_at.strftime('%Y-%m-%d') }}</small><br>
@@ -32,6 +32,7 @@
         {% if o.delivery_interval %}<small>Будет доставлено: {{ o.delivery_interval }}</small><br>{% endif %}
         {% if o.receipt_filename %}<small><a href="{{ url_for('uploaded_file', filename=o.receipt_filename) }}" target="_blank">Чек</a></small><br>{% endif %}
       </div>
+      {% if o.comment %}<p>{{ o.comment }}</p>{% endif %}
       <ul class="my-2">
       {% for item in o.items %}
         <li>{{ item.product.name }} - {{ item.quantity }}</li>
@@ -43,7 +44,7 @@
         <div class="col-12 col-md-4">
           <select name="status" class="form-select">
           {% for s in statuses %}
-            <option value="{{ s }}" {% if s == o.status %}selected{% endif %}>{{ s }}</option>
+            <option value="{{ s }}" {% if s == o.status %}selected{% endif %}>{{ status_titles[s] }}</option>
           {% endfor %}
           </select>
         </div>
