@@ -20,10 +20,11 @@ class User(db.Model):
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), unique=True, nullable=False)
+    name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
     image_url = db.Column(db.String(200))
     quantity = db.Column(db.Integer, default=0)
+    price = db.Column(db.Float, default=0.0)
     is_published = db.Column(db.Boolean, default=False)
     is_limited = db.Column(db.Boolean, default=True)
 
@@ -155,7 +156,8 @@ def cart_view():
         product = Product.query.get(int(pid))
         if product:
             cart_data.append({'product': product, 'qty': qty})
-    return render_template('cart.html', items=cart_data)
+    total = sum(item['product'].price * item['qty'] for item in cart_data)
+    return render_template('cart.html', items=cart_data, total=total)
 
 
 @app.route('/checkout', methods=['GET', 'POST'])
@@ -167,6 +169,7 @@ def checkout():
         product = Product.query.get(int(pid))
         if product:
             items.append({'product': product, 'qty': qty})
+    total = sum(i['product'].price * i['qty'] for i in items)
     if request.method == 'POST':
         date_str = request.form['delivery_date']
         delivery_date = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -182,13 +185,14 @@ def checkout():
         db.session.commit()
         session['cart'] = {}
         return redirect(url_for('my_orders'))
-    return render_template('checkout.html', items=items)
+    return render_template('checkout.html', items=items, total=total)
 
 @app.route('/orders')
 @login_required
 def my_orders():
     orders = Order.query.filter_by(user_id=current_user().id).all()
-    return render_template('orders.html', orders=orders)
+    totals = {o.id: sum(it.quantity * it.product.price for it in o.items) for o in orders}
+    return render_template('orders.html', orders=orders, order_totals=totals)
 
 # Admin routes
 @app.route('/admin')
@@ -206,6 +210,7 @@ def admin_products():
     if request.method == 'POST':
         name = request.form['name']
         quantity = int(request.form.get('quantity', 0))
+        price = float(request.form.get('price', 0))
         description = request.form.get('description')
         image_url = request.form.get('image_url')
         is_published = True if request.form.get('is_published') == 'on' else False
@@ -215,6 +220,7 @@ def admin_products():
             product = Product(name=name)
             db.session.add(product)
         product.quantity = quantity
+        product.price = price
         product.description = description
         product.image_url = image_url
         product.is_published = is_published
@@ -222,6 +228,25 @@ def admin_products():
         db.session.commit()
     products = Product.query.all()
     return render_template('admin_products.html', products=products)
+
+
+@app.route('/admin/products/<int:pid>', methods=['GET', 'POST'])
+@login_required
+def admin_product_edit(pid):
+    if not current_user().is_admin:
+        return 'Not authorized'
+    product = Product.query.get_or_404(pid)
+    if request.method == 'POST':
+        product.name = request.form['name']
+        product.quantity = int(request.form.get('quantity', 0))
+        product.price = float(request.form.get('price', 0))
+        product.description = request.form.get('description')
+        product.image_url = request.form.get('image_url')
+        product.is_published = True if request.form.get('is_published') == 'on' else False
+        product.is_limited = True if request.form.get('is_limited') == 'on' else False
+        db.session.commit()
+        return redirect(url_for('admin_products'))
+    return render_template('admin_product_edit.html', product=product)
 
 @app.route('/admin/orders', methods=['GET', 'POST'])
 @login_required
@@ -249,9 +274,10 @@ def admin_orders():
         query = query.filter(Order.created_at <= dt)
     orders = query.order_by(Order.created_at.desc()).all()
     total_qty = sum(item.quantity for o in orders for item in o.items)
+    total_price = sum(item.quantity * item.product.price for o in orders for item in o.items)
     statuses = ['created', 'in_work', 'gathered', 'sent', 'shipped']
     return render_template('admin_orders.html', orders=orders, statuses=statuses,
-                           total_qty=total_qty)
+                           total_qty=total_qty, total_price=total_price)
 
 if __name__ == '__main__':
     with app.app_context():

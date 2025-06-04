@@ -4,14 +4,17 @@
 <h1 class="mb-3">Оформление заказа</h1>
 {% if items %}
 <table class="table table-bordered mb-3">
-<tr><th>Товар</th><th>Количество</th></tr>
+<tr><th>Товар</th><th>Количество</th><th>Цена</th><th>Сумма</th></tr>
 {% for it in items %}
 <tr>
 <td>{{ it.product.name }}</td>
 <td>{{ it.qty }}</td>
+<td>{{ '%.2f'|format(it.product.price) }}</td>
+<td>{{ '%.2f'|format(it.product.price * it.qty) }}</td>
 </tr>
 {% endfor %}
 </table>
+<p><strong>Итого: {{ '%.2f'|format(total) }}</strong></p>
 <form method="post" class="w-25">
   <div class="mb-3">
     <label class="form-label">Дата доставки</label>
