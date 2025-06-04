@@ -1,15 +1,28 @@
-<!doctype html>
-<title>Admin Products</title>
-<h1>Inventory</h1>
-<form method="post">
-  <input type="text" name="name" placeholder="Product name" required>
-  <input type="number" name="quantity" placeholder="Quantity" required>
-  <button type="submit">Save</button>
+{% extends 'base.html' %}
+{% block title %}Товары{% endblock %}
+{% block content %}
+<h1 class="mb-3">Товары</h1>
+<form method="post" class="mb-4">
+  <div class="row g-2">
+    <div class="col-md-2"><input type="text" name="name" class="form-control" placeholder="Название" required></div>
+    <div class="col-md-2"><input type="number" name="quantity" class="form-control" placeholder="Количество"></div>
+    <div class="col-md-3"><input type="text" name="image_url" class="form-control" placeholder="URL картинки"></div>
+    <div class="col-md-3"><input type="text" name="description" class="form-control" placeholder="Описание"></div>
+    <div class="col-md-1 form-check"><input class="form-check-input" type="checkbox" name="is_published" id="pub"><label class="form-check-label" for="pub">Публикация</label></div>
+    <div class="col-md-1 form-check"><input class="form-check-input" type="checkbox" name="is_limited" id="lim" checked><label class="form-check-label" for="lim">Огр.</label></div>
+  </div>
+  <button type="submit" class="btn btn-primary mt-2">Сохранить</button>
 </form>
-<table border="1">
-<tr><th>Name</th><th>Quantity</th></tr>
+<table class="table table-bordered">
+<tr><th>Название</th><th>Кол-во</th><th>Публикуется</th><th>Ограничен</th></tr>
 {% for p in products %}
-<tr><td>{{ p.name }}</td><td>{{ p.quantity }}</td></tr>
+<tr>
+<td>{{ p.name }}</td>
+<td>{% if p.is_limited %}{{ p.quantity }}{% else %}&infin;{% endif %}</td>
+<td>{{ 'Да' if p.is_published else 'Нет' }}</td>
+<td>{{ 'Да' if p.is_limited else 'Нет' }}</td>
+</tr>
 {% endfor %}
 </table>
-<a href="{{ url_for('admin_orders') }}">Orders</a>
+<a href="{{ url_for('admin_orders') }}">Заказы</a>
+{% endblock %}

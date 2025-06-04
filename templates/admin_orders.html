@@ -1,14 +1,30 @@
-<!doctype html>
-<title>Admin Orders</title>
-<h1>Orders</h1>
-<table border="1">
-<tr><th>ID</th><th>User</th><th>Status</th><th>Created</th><th>Items</th><th>Update</th></tr>
+{% extends 'base.html' %}
+{% block title %}Заказы{% endblock %}
+{% block content %}
+<h1 class="mb-3">Заказы</h1>
+<form method="get" class="row g-2 mb-3">
+  <div class="col-md-3">
+    <select name="status" class="form-select">
+      <option value="">Все статусы</option>
+      {% for s in statuses %}
+        <option value="{{ s }}" {% if request.args.get('status')==s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3"><input type="date" name="date_from" class="form-control" value="{{ request.args.get('date_from','') }}" placeholder="с даты"></div>
+  <div class="col-md-3"><input type="date" name="date_to" class="form-control" value="{{ request.args.get('date_to','') }}" placeholder="по дату"></div>
+  <div class="col-md-2"><button class="btn btn-secondary" type="submit">Фильтр</button></div>
+</form>
+<p>Всего товаров в выборке: {{ total_qty }}</p>
+<table class="table table-bordered">
+<tr><th>ID</th><th>Пользователь</th><th>Статус</th><th>Создан</th><th>Дата доставки</th><th>Товары</th><th>Обновить</th></tr>
 {% for o in orders %}
 <tr>
 <td>{{ o.id }}</td>
 <td>{{ o.user.username }}</td>
 <td>{{ o.status }}</td>
-<td>{{ o.created_at }}</td>
+<td>{{ o.created_at.strftime('%Y-%m-%d') }}</td>
+<td>{{ o.delivery_date }}</td>
 <td>
   <ul>
   {% for item in o.items %}
@@ -17,17 +33,18 @@
   </ul>
 </td>
 <td>
-  <form method="post">
+  <form method="post" class="d-flex">
     <input type="hidden" name="order_id" value="{{ o.id }}">
-    <select name="status">
+    <select name="status" class="form-select me-2">
     {% for s in statuses %}
       <option value="{{ s }}" {% if s == o.status %}selected{% endif %}>{{ s }}</option>
     {% endfor %}
     </select>
-    <button type="submit">Update</button>
+    <button type="submit" class="btn btn-primary">Обновить</button>
   </form>
 </td>
 </tr>
 {% endfor %}
 </table>
-<a href="{{ url_for('admin_products') }}">Products</a>
+<a href="{{ url_for('admin_products') }}">Товары</a>
+{% endblock %}

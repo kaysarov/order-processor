@@ -1,13 +1,15 @@
-<!doctype html>
-<title>My Orders</title>
-<h1>My Orders</h1>
-<table border="1">
-<tr><th>ID</th><th>Status</th><th>Created</th><th>Items</th></tr>
+{% extends 'base.html' %}
+{% block title %}Мои заказы{% endblock %}
+{% block content %}
+<h1 class="mb-3">Мои заказы</h1>
+<table class="table table-bordered">
+<tr><th>ID</th><th>Статус</th><th>Создан</th><th>Дата доставки</th><th>Товары</th></tr>
 {% for o in orders %}
 <tr>
 <td>{{ o.id }}</td>
 <td>{{ o.status }}</td>
-<td>{{ o.created_at }}</td>
+<td>{{ o.created_at.strftime('%Y-%m-%d') }}</td>
+<td>{{ o.delivery_date }}</td>
 <td>
   <ul>
   {% for item in o.items %}
@@ -18,4 +20,4 @@
 </tr>
 {% endfor %}
 </table>
-<a href="{{ url_for('index') }}">New Order</a> | <a href="{{ url_for('logout') }}">Logout</a>
+{% endblock %}
