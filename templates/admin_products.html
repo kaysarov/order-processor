@@ -1,0 +1,15 @@
+<!doctype html>
+<title>Admin Products</title>
+<h1>Inventory</h1>
+<form method="post">
+  <input type="text" name="name" placeholder="Product name" required>
+  <input type="number" name="quantity" placeholder="Quantity" required>
+  <button type="submit">Save</button>
+</form>
+<table border="1">
+<tr><th>Name</th><th>Quantity</th></tr>
+{% for p in products %}
+<tr><td>{{ p.name }}</td><td>{{ p.quantity }}</td></tr>
+{% endfor %}
+</table>
+<a href="{{ url_for('admin_orders') }}">Orders</a>
