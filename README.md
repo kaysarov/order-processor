@@ -18,7 +18,9 @@ Simple Flask web application for managing product inventory and processing order
    python app.py
    ```
 
-The application will create `orders.db` SQLite database on first run.
+The application will create `orders.db` SQLite database on first run. Product
+images uploaded via the admin panel are saved inside the `static/uploads`
+directory which will be created automatically.
 
 ## Usage
 - Register a new user at `/register`.
