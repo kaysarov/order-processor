@@ -1,0 +1,33 @@
+<!doctype html>
+<title>Admin Orders</title>
+<h1>Orders</h1>
+<table border="1">
+<tr><th>ID</th><th>User</th><th>Status</th><th>Created</th><th>Items</th><th>Update</th></tr>
+{% for o in orders %}
+<tr>
+<td>{{ o.id }}</td>
+<td>{{ o.user.username }}</td>
+<td>{{ o.status }}</td>
+<td>{{ o.created_at }}</td>
+<td>
+  <ul>
+  {% for item in o.items %}
+    <li>{{ item.product.name }} - {{ item.quantity }}</li>
+  {% endfor %}
+  </ul>
+</td>
+<td>
+  <form method="post">
+    <input type="hidden" name="order_id" value="{{ o.id }}">
+    <select name="status">
+    {% for s in statuses %}
+      <option value="{{ s }}" {% if s == o.status %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+    </select>
+    <button type="submit">Update</button>
+  </form>
+</td>
+</tr>
+{% endfor %}
+</table>
+<a href="{{ url_for('admin_products') }}">Products</a>

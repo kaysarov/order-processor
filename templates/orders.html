@@ -1,0 +1,21 @@
+<!doctype html>
+<title>My Orders</title>
+<h1>My Orders</h1>
+<table border="1">
+<tr><th>ID</th><th>Status</th><th>Created</th><th>Items</th></tr>
+{% for o in orders %}
+<tr>
+<td>{{ o.id }}</td>
+<td>{{ o.status }}</td>
+<td>{{ o.created_at }}</td>
+<td>
+  <ul>
+  {% for item in o.items %}
+    <li>{{ item.product.name }} - {{ item.quantity }}</li>
+  {% endfor %}
+  </ul>
+</td>
+</tr>
+{% endfor %}
+</table>
+<a href="{{ url_for('index') }}">New Order</a> | <a href="{{ url_for('logout') }}">Logout</a>
