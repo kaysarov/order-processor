@@ -7,7 +7,7 @@
     <select name="status" class="form-select">
       <option value="">Все статусы</option>
       {% for s in statuses %}
-        <option value="{{ s }}" {% if request.args.get('status')==s %}selected{% endif %}>{{ s }}</option>
+        <option value="{{ s }}" {% if request.args.get('status')==s %}selected{% endif %}>{{ STATUS_NAMES.get(s, s) }}</option>
       {% endfor %}
     </select>
   </div>
@@ -17,12 +17,13 @@
 </form>
 <p>Всего товаров в выборке: {{ total_qty }}</p>
 <table class="table table-bordered">
-<tr><th>ID</th><th>Пользователь</th><th>Статус</th><th>Создан</th><th>Дата доставки</th><th>Товары</th><th>Обновить</th></tr>
+<tr><th>ID</th><th>Пользователь</th><th>Статус</th><th>Комментарий</th><th>Создан</th><th>Дата доставки</th><th>Товары</th><th>Обновить</th></tr>
 {% for o in orders %}
 <tr>
 <td>{{ o.id }}</td>
 <td>{{ o.user.username }}</td>
-<td>{{ o.status }}</td>
+<td>{{ STATUS_NAMES.get(o.status, o.status) }}</td>
+<td>{{ o.comment }}</td>
 <td>{{ o.created_at.strftime('%Y-%m-%d') }}</td>
 <td>{{ o.delivery_date }}</td>
 <td>
@@ -37,7 +38,7 @@
     <input type="hidden" name="order_id" value="{{ o.id }}">
     <select name="status" class="form-select me-2">
     {% for s in statuses %}
-      <option value="{{ s }}" {% if s == o.status %}selected{% endif %}>{{ s }}</option>
+      <option value="{{ s }}" {% if s == o.status %}selected{% endif %}>{{ STATUS_NAMES.get(s, s) }}</option>
     {% endfor %}
     </select>
     <button type="submit" class="btn btn-primary">Обновить</button>

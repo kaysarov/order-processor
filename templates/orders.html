@@ -2,12 +2,18 @@
 {% block title %}Мои заказы{% endblock %}
 {% block content %}
 <h1 class="mb-3">Мои заказы</h1>
+<form method="get" class="row g-2 mb-3">
+  <div class="col-md-3"><input type="date" name="date_from" class="form-control" value="{{ request.args.get('date_from','') }}" placeholder="с даты"></div>
+  <div class="col-md-3"><input type="date" name="date_to" class="form-control" value="{{ request.args.get('date_to','') }}" placeholder="по дату"></div>
+  <div class="col-md-2"><button class="btn btn-secondary" type="submit">Фильтр</button></div>
+</form>
 <table class="table table-bordered">
-<tr><th>ID</th><th>Статус</th><th>Создан</th><th>Дата доставки</th><th>Товары</th></tr>
+<tr><th>ID</th><th>Статус</th><th>Комментарий</th><th>Создан</th><th>Дата доставки</th><th>Товары</th></tr>
 {% for o in orders %}
 <tr>
 <td>{{ o.id }}</td>
-<td>{{ o.status }}</td>
+<td>{{ STATUS_NAMES.get(o.status, o.status) }}</td>
+<td>{{ o.comment }}</td>
 <td>{{ o.created_at.strftime('%Y-%m-%d') }}</td>
 <td>{{ o.delivery_date }}</td>
 <td>

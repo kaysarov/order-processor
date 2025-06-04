@@ -3,10 +3,10 @@
 Simple Flask web application for managing product inventory and processing orders. The UI uses Bootstrap and supports Russian localization.
 
 ## Features
-- Admin panel to manage product stock.
+- Admin panel to manage product stock with image uploads.
 - User registration and login.
-- Users can browse a storefront, add products to a cart and checkout specifying delivery date.
-- Admin can view and update order statuses (created, in_work, gathered, sent, shipped).
+- Users can browse a storefront, add products to a cart and checkout specifying delivery date and optional comment.
+- Admin can view and update order statuses with Russian names and filter orders by date.
 
 ## Installation
 1. Install dependencies:

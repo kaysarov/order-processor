@@ -2,11 +2,11 @@
 {% block title %}Товары{% endblock %}
 {% block content %}
 <h1 class="mb-3">Товары</h1>
-<form method="post" class="mb-4">
+<form method="post" enctype="multipart/form-data" class="mb-4">
   <div class="row g-2">
     <div class="col-md-2"><input type="text" name="name" class="form-control" placeholder="Название" required></div>
     <div class="col-md-2"><input type="number" name="quantity" class="form-control" placeholder="Количество"></div>
-    <div class="col-md-3"><input type="text" name="image_url" class="form-control" placeholder="URL картинки"></div>
+    <div class="col-md-3"><input type="file" name="image" class="form-control"></div>
     <div class="col-md-3"><input type="text" name="description" class="form-control" placeholder="Описание"></div>
     <div class="col-md-1 form-check"><input class="form-check-input" type="checkbox" name="is_published" id="pub"><label class="form-check-label" for="pub">Публикация</label></div>
     <div class="col-md-1 form-check"><input class="form-check-input" type="checkbox" name="is_limited" id="lim" checked><label class="form-check-label" for="lim">Огр.</label></div>
