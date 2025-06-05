@@ -18,7 +18,15 @@
         {% if p.is_limited %}
           <p class="text-muted">В наличии: {{ p.quantity }}</p>
         {% endif %}
-        <a href="{{ url_for('add_to_cart', pid=p.id) }}" class="btn btn-primary">В корзину</a>
+        {% if cart.get(p.id) %}
+          <div class="d-flex align-items-center">
+            <a href="{{ url_for('decrease_cart', pid=p.id) }}" class="btn btn-sm btn-secondary me-2">-</a>
+            <span>{{ cart[p.id] }}</span>
+            <a href="{{ url_for('add_to_cart', pid=p.id) }}" class="btn btn-sm btn-secondary ms-2">+</a>
+          </div>
+        {% else %}
+          <a href="{{ url_for('add_to_cart', pid=p.id) }}" class="btn btn-primary">В корзину</a>
+        {% endif %}
       </div>
     </div>
   </div>

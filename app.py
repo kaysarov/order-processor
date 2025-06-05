@@ -134,7 +134,8 @@ def get_cart():
 @login_required
 def index():
     products = Product.query.filter_by(is_published=True).all()
-    return render_template('shop.html', products=products)
+    cart = {int(k): v for k, v in get_cart().items()}
+    return render_template('shop.html', products=products, cart=cart)
 
 
 @app.route('/add_to_cart/<int:pid>')
@@ -149,6 +150,40 @@ def add_to_cart(pid):
         cart[str(pid)] = qty + 1
         session['cart'] = cart
     return redirect(url_for('index'))
+
+
+@app.route('/decrease_cart/<int:pid>')
+@login_required
+def decrease_cart(pid):
+    cart = get_cart()
+    qty = cart.get(str(pid), 0)
+    if qty > 1:
+        cart[str(pid)] = qty - 1
+    elif qty == 1:
+        cart.pop(str(pid))
+    session['cart'] = cart
+    return redirect(request.referrer or url_for('index'))
+
+
+@app.route('/update_cart/<int:pid>', methods=['POST'])
+@login_required
+def update_cart(pid):
+    cart = get_cart()
+    try:
+        quantity = int(request.form.get('quantity', 1))
+    except ValueError:
+        quantity = 1
+    product = Product.query.get(pid)
+    if quantity <= 0:
+        cart.pop(str(pid), None)
+    else:
+        if product and product.is_published:
+            if not product.is_limited or quantity <= product.quantity:
+                cart[str(pid)] = quantity
+            else:
+                cart[str(pid)] = product.quantity
+    session['cart'] = cart
+    return redirect(request.referrer or url_for('cart_view'))
 
 
 @app.route('/remove_from_cart/<int:pid>')
@@ -343,9 +378,10 @@ def admin_orders():
     orders = query.order_by(Order.created_at.desc()).all()
     total_qty = sum(item.quantity for o in orders for item in o.items)
     total_price = sum(item.quantity * item.product.price for o in orders for item in o.items)
+    order_totals = {o.id: sum(it.quantity * it.product.price for it in o.items) for o in orders}
     statuses = list(STATUS_TITLES.keys())
     return render_template('admin_orders.html', orders=orders, statuses=statuses,
-                           total_qty=total_qty, total_price=total_price)
+                           total_qty=total_qty, total_price=total_price, order_totals=order_totals)
 
 
 @app.route('/admin/users', methods=['GET', 'POST'])
